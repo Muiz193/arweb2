@@ -9,7 +9,6 @@
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <script>
-      // *** YOUR EXISTING GESTURE DETECTOR COMPONENT (Kept) ***
       AFRAME.registerComponent('gesture-detector', {
         schema: { enabled: { default: true }, sensitivity: { default: 0.5 }, zoomSpeed: { default: 0.01 } },
         init: function () {
@@ -17,7 +16,10 @@
           this.startX = 0;
           this.startY = 0;
           this.startRotation = { x: 0, y: 0 };
-          this.startScale = 1.5; 
+          
+          // *** UPDATED: Initial scale set to 5.0 to match the HTML scale ***
+          this.startScale = 5.0; 
+          
           this.el.sceneEl.addEventListener('mousedown', (e) => this.onStart(e));
           this.el.sceneEl.addEventListener('mousemove', (e) => this.onMove(e));
           this.el.sceneEl.addEventListener('mouseup', (e) => this.onEnd(e));
@@ -58,7 +60,8 @@
           if (event.touches.length === 2) {
             const newDistance = this.getTouchDistance(event.touches);
             const scaleFactor = newDistance / this.startDistance;
-            const newScale = Math.min(Math.max(this.startScale * scaleFactor, 0.05), 5.0); 
+            // *** UPDATED: Max zoom limit is now 10.0 ***
+            const newScale = Math.min(Math.max(this.startScale * scaleFactor, 0.05), 10.0); 
             this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
           } else if (event.touches.length === 1) {
             this.onMove(event.touches[0]);
@@ -67,7 +70,8 @@
         onZoom: function (event) {
           const scale = this.el.getAttribute('scale').x;
           let newScale = scale + (event.deltaY * -this.data.zoomSpeed);
-          newScale = Math.min(Math.max(newScale, 0.05), 5.0); 
+          // *** UPDATED: Max zoom limit is now 10.0 ***
+          newScale = Math.min(Math.max(newScale, 0.05), 10.0); 
           this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
         },
         getTouchDistance: function (touches) {
@@ -84,7 +88,7 @@
     <script>
       AFRAME.registerComponent('mindar-pinning-model', {
         schema: {
-          targetId: { type: 'string' } // ID of the mindar-image-target (e.g., #target-0)
+          targetId: { type: 'string' }
         },
         init: function() {
           const targetEl = document.querySelector(this.data.targetId);
@@ -95,28 +99,22 @@
           targetEl.addEventListener('targetFound', () => {
             if (isPinned) return;
             
-            // Wait for one more frame to ensure position is stable
             setTimeout(() => {
-              // 1. Get the world position/rotation from the marker
               const worldPos = new THREE.Vector3();
               const worldRot = new THREE.Quaternion();
               targetEl.object3D.getWorldPosition(worldPos);
               targetEl.object3D.getWorldQuaternion(worldRot);
 
-              // 2. Apply world transformation to the model (since it's a child of the scene)
               modelEl.object3D.position.copy(worldPos);
               modelEl.object3D.quaternion.copy(worldRot);
 
-              // 3. Make the model visible
               modelEl.setAttribute('visible', true);
-              
-              // 4. Disable the marker tracking entity's visibility (to stop updates)
               targetEl.object3D.visible = false;
               
               isPinned = true;
               console.log("Model pinned to world successfully!");
-            }, 100); // 100ms delay to ensure stable tracking position
-          }, { once: true }); // Only runs once
+            }, 100);
+          }, { once: true });
         }
       });
     </script>
@@ -143,7 +141,9 @@
         id="pinned-model"
         rotation="0 0 0" 
         position="0 0 0" 
-        scale="1.5 1.5 1.5" 
+        
+        scale="5.0 5.0 5.0" 
+        
         src="#hardAnimationModel" 
         animation-mixer 
         gesture-detector
@@ -159,4 +159,3 @@
     
   </body>
 </html>
-
