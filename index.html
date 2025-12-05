@@ -16,18 +16,15 @@
     
     <script>
       // *** CONFIGURABLE DELAY TIME (in seconds) ***
-      const audioDelaySeconds = 1; 
+      const audioDelaySeconds = 0.5; 
       
       let audioPlayed = false;
       
-      // REVISED FUNCTION: Audio playback is now wrapped in a delay
       const playAudioFallback = () => {
           if (audioPlayed) return;
           
-          // Calculate delay in milliseconds
           const delayMs = audioDelaySeconds * 1000;
 
-          // Set a timeout before attempting to play the audio
           setTimeout(() => {
               const audioEl = document.querySelector('#audio-files');
               if (audioEl && audioEl.paused) {
@@ -38,14 +35,13 @@
                       audioPlayed = true;
                       console.log(`HTML Audio started successfully after ${audioDelaySeconds} seconds.`);
                   }).catch(e => {
-                      // This catch block will likely run if the browser still hasn't unlocked the Audio Context
                       console.warn("HTML Audio playback failed (browser block), waiting for user interaction:", e);
                   });
               }
           }, delayMs);
       };
 
-      // *** GESTURE DETECTOR COMPONENT (Kept) ***
+      // *** GESTURE DETECTOR COMPONENT ***
       AFRAME.registerComponent('gesture-detector', {
         schema: { enabled: { default: true }, sensitivity: { default: 0.5 }, zoomSpeed: { default: 0.01 } },
         init: function () {
@@ -107,7 +103,8 @@
         onZoom: function (event) {
           const scale = this.el.getAttribute('scale').x;
           let newScale = scale + (event.deltaY * -this.data.zoomSpeed);
-          newScale = Math.min(Math.max(newScale, 0.05), 30.0); 
+          // *** MODIFIED: Mouse wheel limit is now 50.0 (was 30.0) ***
+          newScale = Math.min(Math.max(newScale, 0.05), 50.0); 
           this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
         },
         getTouchDistance: function (touches) {
@@ -148,17 +145,12 @@
                   modelEl.setAttribute('visible', true);
                   targetEl.object3D.visible = false;
                   
-                  // ** AUDIO FALLBACK TRIGGER **
-                  // Play is now delayed inside playAudioFallback()
-                  playAudioFallback(); 
+                  playAudioFallback();
 
-                  // Set up listener for user interaction to force audio playback immediately (no delay)
-                  // We add a listener for the required user action to unlock audio, but that action *also*
-                  // triggers the delayed play attempt if it hasn't happened yet.
                   document.body.addEventListener('touchstart', playAudioFallback, { once: true });
                   document.body.addEventListener('click', playAudioFallback, { once: true });
                   
-                  console.log("Model pinned. Audio delay active.");
+                  console.log("Model pinned. Waiting for user interaction to confirm audio.");
               }, 100);
           };
 
@@ -214,5 +206,3 @@
     
   </body>
 </html>
-
-
