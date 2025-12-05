@@ -17,7 +17,7 @@
           this.startX = 0;
           this.startY = 0;
           this.startRotation = { x: 0, y: 0 };
-          this.startScale = 5.0; 
+          this.startScale = 10.0; 
           this.el.sceneEl.addEventListener('mousedown', (e) => this.onStart(e));
           this.el.sceneEl.addEventListener('mousemove', (e) => this.onMove(e));
           this.el.sceneEl.addEventListener('mouseup', (e) => this.onEnd(e));
@@ -58,7 +58,7 @@
           if (event.touches.length === 2) {
             const newDistance = this.getTouchDistance(event.touches);
             const scaleFactor = newDistance / this.startDistance;
-            const newScale = Math.min(Math.max(this.startScale * scaleFactor, 0.05), 10.0); 
+            const newScale = Math.min(Math.max(this.startScale * scaleFactor, 0.05), 30.0); 
             this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
           } else if (event.touches.length === 1) {
             this.onMove(event.touches[0]);
@@ -67,7 +67,7 @@
         onZoom: function (event) {
           const scale = this.el.getAttribute('scale').x;
           let newScale = scale + (event.deltaY * -this.data.zoomSpeed);
-          newScale = Math.min(Math.max(newScale, 0.05), 10.0); 
+          newScale = Math.min(Math.max(newScale, 0.05), 30.0); 
             this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
         },
         getTouchDistance: function (touches) {
@@ -166,8 +166,6 @@
 
       <audio id="audio-files" preload="auto" style="display:none;">
           <source src="/arweb2/hardanimation.ogg" type="audio/ogg">
-          <source src="/arweb2/hardanimation.mp3" type="audio/mpeg">
-          <source src="/arweb2/hardanimation.wav" type="audio/wav">
           Your browser does not support the audio element.
       </audio>
 
@@ -179,7 +177,7 @@
         id="pinned-model"
         rotation="0 0 0" 
         position="0 0 0" 
-        scale="5.0 5.0 5.0" 
+        scale="10.0 10.0 10.0" 
         src="#hardAnimationModel" 
         animation-mixer 
         gesture-detector
@@ -193,3 +191,4 @@
     
   </body>
 </html>
+
