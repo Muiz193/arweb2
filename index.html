@@ -17,7 +17,7 @@
           this.startX = 0;
           this.startY = 0;
           this.startRotation = { x: 0, y: 0 };
-          this.startScale = 8.0; // Matches HTML scale
+          this.startScale = 5.0; 
           this.el.sceneEl.addEventListener('mousedown', (e) => this.onStart(e));
           this.el.sceneEl.addEventListener('mousemove', (e) => this.onMove(e));
           this.el.sceneEl.addEventListener('mouseup', (e) => this.onEnd(e));
@@ -86,44 +86,57 @@
         init: function() {
           const targetEl = document.querySelector('#target-0');
           const modelEl = this.el;
-          
+          const sceneEl = modelEl.sceneEl;
+
           let isPinned = false;
-
-          targetEl.addEventListener('targetFound', () => {
-            if (isPinned) return;
-            
-            setTimeout(() => {
-              const worldPos = new THREE.Vector3();
-              const worldRot = new THREE.Quaternion();
-              targetEl.object3D.getWorldPosition(worldPos);
-              targetEl.object3D.getWorldQuaternion(worldRot);
-
-              modelEl.object3D.position.copy(worldPos);
-              modelEl.object3D.quaternion.copy(worldRot);
-
-              modelEl.setAttribute('visible', true);
-              targetEl.object3D.visible = false;
+          let modelReady = false;
+          let targetFound = false;
+          
+          // Function to execute the pinning logic
+          const executePinning = () => {
+              if (isPinned || !modelReady || !targetFound) return;
               
               isPinned = true;
-              
-              // *** AUDIO PLAYBACK LOGIC ***
-              const soundComponent = modelEl.components.sound;
-              if (soundComponent) {
-                  // Attempt to play the sound automatically
-                  soundComponent.playSound();
+
+              // Use a small timeout to ensure one final stable pose is read
+              setTimeout(() => {
+                  const worldPos = new THREE.Vector3();
+                  const worldRot = new THREE.Quaternion();
+                  targetEl.object3D.getWorldPosition(worldPos);
+                  targetEl.object3D.getWorldQuaternion(worldRot);
+
+                  modelEl.object3D.position.copy(worldPos);
+                  modelEl.object3D.quaternion.copy(worldRot);
+
+                  modelEl.setAttribute('visible', true);
+                  targetEl.object3D.visible = false;
                   
-                  // Add an event listener to the scene to trigger audio on first tap if autoplay fails
-                  const sceneEl = modelEl.sceneEl;
-                  sceneEl.addEventListener('touchstart', function playFallbackAudio() {
-                      if (soundComponent.pool.children.length > 0 && soundComponent.pool.children[0].paused) {
-                          soundComponent.playSound();
-                          console.log("Audio manually triggered by user touch.");
-                      }
-                      sceneEl.removeEventListener('touchstart', playFallbackAudio);
-                  }, { once: true });
-              }
-              console.log("Model pinned and audio attempt initiated.");
-            }, 100);
+                  // AUDIO PLAYBACK LOGIC
+                  const soundComponent = modelEl.components.sound;
+                  if (soundComponent) {
+                      soundComponent.playSound();
+                      // Fallback for autoplay policy
+                      sceneEl.addEventListener('touchstart', function playFallbackAudio() {
+                          if (soundComponent.pool.children.length > 0 && soundComponent.pool.children[0].paused) {
+                              soundComponent.playSound();
+                          }
+                          sceneEl.removeEventListener('touchstart', playFallbackAudio);
+                      }, { once: true });
+                  }
+                  console.log("Model pinned and audio initiated!");
+              }, 100);
+          };
+
+          // Event 1: Model is fully loaded and ready to be manipulated
+          modelEl.addEventListener('model-loaded', () => {
+              modelReady = true;
+              executePinning();
+          });
+          
+          // Event 2: Target is detected by the camera
+          targetEl.addEventListener('targetFound', () => {
+              targetFound = true;
+              executePinning();
           }, { once: true });
         }
       });
@@ -140,8 +153,7 @@
     >
       <a-assets>
         <a-asset-item id="hardAnimationModel" src="/arweb2/hardanimation.glb"></a-asset-item>
-        
-        <audio id="animationAudio" src="/arweb2/hardanimation.mpeg" preload="auto"></audio> 
+        <audio id="animationAudio" src="/arweb2/hardanimation.mp3" preload="auto"></audio> 
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -152,7 +164,7 @@
         id="pinned-model"
         rotation="0 0 0" 
         position="0 0 0" 
-        scale="8.0 8.0 8.0" 
+        scale="5.0 5.0 5.0" 
         src="#hardAnimationModel" 
         animation-mixer 
         gesture-detector
@@ -161,7 +173,7 @@
         
         visible="false"
         
-        mindar-pinning-model="targetId: #target-0"
+        pin-and-play-audio
       >
       </a-gltf-model>
       
