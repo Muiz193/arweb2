@@ -2,14 +2,14 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>AR Model - Pinned Final with MPEG Audio</title>
+    <title>AR Model - Robust Audio Fix</title>
     
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.2.0/dist/aframe-extras.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <script>
-      // *** GESTURE DETECTOR COMPONENT (Unchanged) ***
+      // *** GESTURE DETECTOR COMPONENT (Kept) ***
       AFRAME.registerComponent('gesture-detector', {
         schema: { enabled: { default: true }, sensitivity: { default: 0.5 }, zoomSpeed: { default: 0.01 } },
         init: function () {
@@ -17,7 +17,7 @@
           this.startX = 0;
           this.startY = 0;
           this.startRotation = { x: 0, y: 0 };
-          this.startScale = 15.0; 
+          this.startScale = 5.0; 
           this.el.sceneEl.addEventListener('mousedown', (e) => this.onStart(e));
           this.el.sceneEl.addEventListener('mousemove', (e) => this.onMove(e));
           this.el.sceneEl.addEventListener('mouseup', (e) => this.onEnd(e));
@@ -58,7 +58,7 @@
           if (event.touches.length === 2) {
             const newDistance = this.getTouchDistance(event.touches);
             const scaleFactor = newDistance / this.startDistance;
-            const newScale = Math.min(Math.max(this.startScale * scaleFactor, 0.05), 30.0); 
+            const newScale = Math.min(Math.max(this.startScale * scaleFactor, 0.05), 10.0); 
             this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
           } else if (event.touches.length === 1) {
             this.onMove(event.touches[0]);
@@ -68,7 +68,7 @@
           const scale = this.el.getAttribute('scale').x;
           let newScale = scale + (event.deltaY * -this.data.zoomSpeed);
           newScale = Math.min(Math.max(newScale, 0.05), 10.0); 
-          this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
+            this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
         },
         getTouchDistance: function (touches) {
           const dx = touches[0].clientX - touches[1].clientX;
@@ -82,11 +82,27 @@
     </script>
     
     <script>
-      AFRAME.registerComponent('pin-and-robust-audio', {
+      let audioPlayed = false;
+      
+      const playAudioFallback = () => {
+          if (audioPlayed) return;
+          const audioEl = document.querySelector('#audio-files');
+          if (audioEl && audioEl.paused) {
+              audioEl.loop = true;
+              audioEl.volume = 0.5; // Set volume to 50%
+              audioEl.play().then(() => {
+                  audioPlayed = true;
+                  console.log("HTML Audio started successfully.");
+              }).catch(e => {
+                  console.warn("HTML Audio playback failed (browser block):", e);
+              });
+          }
+      };
+
+      AFRAME.registerComponent('pin-and-play-audio', {
         init: function() {
           const targetEl = document.querySelector('#target-0');
           const modelEl = this.el;
-          const sceneEl = modelEl.sceneEl;
 
           let isPinned = false;
           let modelReady = false;
@@ -109,27 +125,15 @@
                   modelEl.setAttribute('visible', true);
                   targetEl.object3D.visible = false;
                   
-                  // ** ROBUST AUDIO PLAYBACK LOGIC **
-                  const soundComponent = modelEl.components.sound;
-                  
-                  // Wait for the A-Frame sound system to be ready (Crucial for audio timing)
-                  sceneEl.systems.sound.el.addEventListener('sound-system-loaded', () => {
-                      if (soundComponent) {
-                          soundComponent.playSound();
-                      }
-                  });
+                  // ** AUDIO FALLBACK TRIGGER **
+                  // Immediately try to play audio after pinning
+                  playAudioFallback();
 
-                  // Fallback for autoplay policy (This is what will truly activate it)
-                  if (soundComponent) {
-                      sceneEl.addEventListener('touchstart', function playFallbackAudio() {
-                          if (soundComponent.pool.children.length > 0 && soundComponent.pool.children[0].paused) {
-                              soundComponent.playSound();
-                              console.log("Audio manually triggered by user touch.");
-                          }
-                          sceneEl.removeEventListener('touchstart', playFallbackAudio);
-                      }, { once: true });
-                  }
-                  console.log("Model pinned and robust audio initiation started.");
+                  // Set up listener for user interaction to force audio playback
+                  document.body.addEventListener('touchstart', playAudioFallback, { once: true });
+                  document.body.addEventListener('click', playAudioFallback, { once: true });
+                  
+                  console.log("Model pinned. Waiting for user interaction to confirm audio.");
               }, 100);
           };
 
@@ -158,8 +162,14 @@
       <a-assets>
         <a-asset-item id="hardAnimationModel" src="/arweb2/hardanimation.glb"></a-asset-item>
         
-        <audio id="animationAudio" src="/arweb2/hardanimation.mp3" preload="auto"></audio> 
-      </a-assets>
+        </a-assets>
+
+      <audio id="audio-files" preload="auto" style="display:none;">
+          <source src="/arweb2/hardanimation.ogg" type="audio/ogg">
+          <source src="/arweb2/hardanimation.mp3" type="audio/mpeg">
+          <source src="/arweb2/hardanimation.wav" type="audio/wav">
+          Your browser does not support the audio element.
+      </audio>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
@@ -169,16 +179,13 @@
         id="pinned-model"
         rotation="0 0 0" 
         position="0 0 0" 
-        scale="15.0 15.0 15.0" 
+        scale="5.0 5.0 5.0" 
         src="#hardAnimationModel" 
         animation-mixer 
         gesture-detector
         
-        sound="src: #animationAudio; autoplay: false; loop: true; volume: 5;"
-        
         visible="false"
-        
-        pin-and-robust-audio="targetId: #target-0"
+        pin-and-play-audio="targetId: #target-0"
       >
       </a-gltf-model>
       
@@ -186,5 +193,3 @@
     
   </body>
 </html>
-
-
