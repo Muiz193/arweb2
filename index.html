@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>AR Model - Pinned Final with Audio</title>
+    <title>AR Model - Pinned Final with MPEG Audio</title>
     
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.2.0/dist/aframe-extras.min.js"></script>
@@ -17,7 +17,7 @@
           this.startX = 0;
           this.startY = 0;
           this.startRotation = { x: 0, y: 0 };
-          this.startScale = 5.0; 
+          this.startScale = 8.0; 
           this.el.sceneEl.addEventListener('mousedown', (e) => this.onStart(e));
           this.el.sceneEl.addEventListener('mousemove', (e) => this.onMove(e));
           this.el.sceneEl.addEventListener('mouseup', (e) => this.onEnd(e));
@@ -82,7 +82,7 @@
     </script>
     
     <script>
-      AFRAME.registerComponent('pin-and-play-audio', {
+      AFRAME.registerComponent('pin-and-robust-audio', {
         init: function() {
           const targetEl = document.querySelector('#target-0');
           const modelEl = this.el;
@@ -92,13 +92,11 @@
           let modelReady = false;
           let targetFound = false;
           
-          // Function to execute the pinning logic
           const executePinning = () => {
               if (isPinned || !modelReady || !targetFound) return;
               
               isPinned = true;
 
-              // Use a small timeout to ensure one final stable pose is read
               setTimeout(() => {
                   const worldPos = new THREE.Vector3();
                   const worldRot = new THREE.Quaternion();
@@ -111,29 +109,35 @@
                   modelEl.setAttribute('visible', true);
                   targetEl.object3D.visible = false;
                   
-                  // AUDIO PLAYBACK LOGIC
+                  // ** ROBUST AUDIO PLAYBACK LOGIC **
                   const soundComponent = modelEl.components.sound;
+                  
+                  // Wait for the A-Frame sound system to be ready (Crucial for audio timing)
+                  sceneEl.systems.sound.el.addEventListener('sound-system-loaded', () => {
+                      if (soundComponent) {
+                          soundComponent.playSound();
+                      }
+                  });
+
+                  // Fallback for autoplay policy (This is what will truly activate it)
                   if (soundComponent) {
-                      soundComponent.playSound();
-                      // Fallback for autoplay policy
                       sceneEl.addEventListener('touchstart', function playFallbackAudio() {
                           if (soundComponent.pool.children.length > 0 && soundComponent.pool.children[0].paused) {
                               soundComponent.playSound();
+                              console.log("Audio manually triggered by user touch.");
                           }
                           sceneEl.removeEventListener('touchstart', playFallbackAudio);
                       }, { once: true });
                   }
-                  console.log("Model pinned and audio initiated!");
+                  console.log("Model pinned and robust audio initiation started.");
               }, 100);
           };
 
-          // Event 1: Model is fully loaded and ready to be manipulated
           modelEl.addEventListener('model-loaded', () => {
               modelReady = true;
               executePinning();
           });
           
-          // Event 2: Target is detected by the camera
           targetEl.addEventListener('targetFound', () => {
               targetFound = true;
               executePinning();
@@ -153,6 +157,7 @@
     >
       <a-assets>
         <a-asset-item id="hardAnimationModel" src="/arweb2/hardanimation.glb"></a-asset-item>
+        
         <audio id="animationAudio" src="/arweb2/hardanimation.mpeg" preload="auto"></audio> 
       </a-assets>
 
@@ -164,7 +169,7 @@
         id="pinned-model"
         rotation="0 0 0" 
         position="0 0 0" 
-        scale="5.0 5.0 5.0" 
+        scale="8.0 8.0 8.0" 
         src="#hardAnimationModel" 
         animation-mixer 
         gesture-detector
@@ -173,7 +178,7 @@
         
         visible="false"
         
-        pin-and-play-audio
+        pin-and-robust-audio="targetId: #target-0"
       >
       </a-gltf-model>
       
@@ -181,4 +186,3 @@
     
   </body>
 </html>
-
