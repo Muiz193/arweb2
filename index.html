@@ -98,7 +98,7 @@
           if (event.touches.length === 2) {
             const newDistance = this.getTouchDistance(event.touches);
             const scaleFactor = newDistance / this.startDistance;
-            const newScale = Math.min(Math.max(this.startScale * scaleFactor, 0.05), 30.0); 
+            const newScale = Math.min(Math.max(this.startScale * scaleFactor, 0.05), 50.0); 
             this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
           } else if (event.touches.length === 1) {
             this.onMove(event.touches[0]);
@@ -189,9 +189,7 @@
         </a-assets>
 
       <audio id="audio-files" preload="auto" style="display:none;">
-          <source src="/arweb2/hardanimation.ogg" type="audio/ogg">
-          <source src="/arweb2/hardanimation.mp3" type="audio/mpeg">
-          <source src="/arweb2/hardanimation.wav" type="audio/wav">
+          <source src="/arweb2/animationaudio.ogg" type="audio/ogg">
           Your browser does not support the audio element.
       </audio>
 
@@ -216,3 +214,4 @@
     
   </body>
 </html>
+
