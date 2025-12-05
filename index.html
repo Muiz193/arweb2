@@ -2,14 +2,13 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>AR Model - Pinned Final</title>
+    <title>AR Model</title>
     
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.2.0/dist/aframe-extras.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <script>
-      // *** YOUR EXISTING GESTURE DETECTOR COMPONENT (Kept) ***
       AFRAME.registerComponent('gesture-detector', {
         schema: { enabled: { default: true }, sensitivity: { default: 0.5 }, zoomSpeed: { default: 0.01 } },
         init: function () {
@@ -17,15 +16,24 @@
           this.startX = 0;
           this.startY = 0;
           this.startRotation = { x: 0, y: 0 };
-          this.startScale = 0.8; 
+          
+          // *** UPDATED: Initial scale set to 1.5 to match the HTML scale ***
+          this.startScale = 1.5; 
+
+          // Mouse Events (Rotation)
           this.el.sceneEl.addEventListener('mousedown', (e) => this.onStart(e));
           this.el.sceneEl.addEventListener('mousemove', (e) => this.onMove(e));
           this.el.sceneEl.addEventListener('mouseup', (e) => this.onEnd(e));
+
+          // Touch Events (Rotation & Pinch-Zoom)
           this.el.sceneEl.addEventListener('touchstart', (e) => this.onTouchStart(e));
           this.el.sceneEl.addEventListener('touchmove', (e) => this.onTouchMove(e));
           this.el.sceneEl.addEventListener('touchend', () => this.onEnd());
+
+          // Mouse Wheel (Zoom)
           this.el.sceneEl.addEventListener('wheel', (e) => this.onZoom(e));
         },
+        
         onStart: function (event) {
           if (this.data.enabled) {
             this.isDragging = true;
@@ -35,17 +43,21 @@
             this.startRotation = { x: currentRotation.x, y: currentRotation.y };
           }
         },
+
         onMove: function (event) {
           if (this.isDragging && this.data.enabled) {
             const deltaX = event.screenX - this.startX;
             const deltaY = event.screenY - this.startY;
+
             const newRotation = {
               x: this.startRotation.x - deltaY * this.data.sensitivity, 
               y: this.startRotation.y + deltaX * this.data.sensitivity, 
             };
+
             this.el.setAttribute('rotation', newRotation);
           }
         },
+
         onTouchStart: function (event) {
           if (event.touches.length === 2) {
             this.startDistance = this.getTouchDistance(event.touches);
@@ -54,77 +66,47 @@
             this.onStart(event.touches[0]);
           }
         },
+
         onTouchMove: function (event) {
           if (event.touches.length === 2) {
             const newDistance = this.getTouchDistance(event.touches);
             const scaleFactor = newDistance / this.startDistance;
-            const newScale = Math.min(Math.max(this.startScale * scaleFactor, 0.5), 3.0); 
+            
+            // Maximum zoom limit is increased to 5.0 to allow greater scaling
+            const newScale = Math.min(Math.max(this.startScale * scaleFactor, 0.05), 5.0); 
+            
             this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
           } else if (event.touches.length === 1) {
             this.onMove(event.touches[0]);
           }
         },
+
         onZoom: function (event) {
           const scale = this.el.getAttribute('scale').x;
           let newScale = scale + (event.deltaY * -this.data.zoomSpeed);
-          newScale = Math.min(Math.max(newScale, 0.05), 3.0); 
+          
+          // Maximum zoom limit is increased to 5.0
+          newScale = Math.min(Math.max(newScale, 0.05), 5.0); 
+          
           this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
         },
+
         getTouchDistance: function (touches) {
           const dx = touches[0].clientX - touches[1].clientX;
           const dy = touches[0].clientY - touches[1].clientY;
           return Math.sqrt(dx * dx + dy * dy);
         },
+
         onEnd: function () {
           this.isDragging = false;
         },
-      });
-    </script>
-    
-    <script>
-      AFRAME.registerComponent('mindar-pinning-model', {
-        schema: {
-          targetId: { type: 'string' } // ID of the mindar-image-target (e.g., #target-0)
-        },
-        init: function() {
-          const targetEl = document.querySelector(this.data.targetId);
-          const modelEl = this.el;
-          
-          let isPinned = false;
-
-          targetEl.addEventListener('targetFound', () => {
-            if (isPinned) return;
-            
-            // Wait for one more frame to ensure position is stable
-            setTimeout(() => {
-              // 1. Get the world position/rotation from the marker
-              const worldPos = new THREE.Vector3();
-              const worldRot = new THREE.Quaternion();
-              targetEl.object3D.getWorldPosition(worldPos);
-              targetEl.object3D.getWorldQuaternion(worldRot);
-
-              // 2. Apply world transformation to the model (since it's a child of the scene)
-              modelEl.object3D.position.copy(worldPos);
-              modelEl.object3D.quaternion.copy(worldRot);
-
-              // 3. Make the model visible
-              modelEl.setAttribute('visible', true);
-              
-              // 4. Disable the marker tracking entity's visibility (to stop updates)
-              targetEl.object3D.visible = false;
-              
-              isPinned = true;
-              console.log("Model pinned to world successfully!");
-            }, 100); // 100ms delay to ensure stable tracking position
-          }, { once: true }); // Only runs once
-        }
       });
     </script>
   </head>
   <body>
 
     <a-scene 
-      mindar-image="imageTargetSrc: /arweb2/targets.mind;" 
+      mindar-image="imageTargetSrc: /arweb2/targets.mind; filterMinCF: 0.0001; filterBeta: 1000;" 
       color-space="sRGB" 
       renderer="colorManagement: true, physicallyCorrectLights" 
       vr-mode-ui="enabled: false" 
@@ -135,29 +117,29 @@
         <audio id="animationAudio" src="/arweb2/hardanimation.mp3" preload="auto"></audio> 
       </a-assets>
 
+
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <a-entity mindar-image-target="targetIndex: 0" id="target-0"></a-entity>
+
+      <a-entity mindar-image-target="targetIndex: 0">
         
-      <a-gltf-model 
-        id="pinned-model"
-        rotation="0 0 0" 
-        position="0 0 0" 
-        scale="0.8 0.8 0.8" 
-        src="#hardAnimationModel" 
-        animation-mixer 
-        gesture-detector
-        sound="src: #animationAudio; autoplay: true; loop: true; volume: 2;"
-        
-        visible="false"
-        
-        mindar-pinning-model="targetId: #target-0"
-      >
-      </a-gltf-model>
+        <a-gltf-model 
+          rotation="0 0 0" 
+          position="0 0 0.1" 
+          
+          scale="1.5 1.5 1.5" 
+          
+          src="#hardAnimationModel" 
+          animation-mixer 
+          
+          gesture-detector
+          
+          sound="src: #animationAudio; autoplay: true; loop: true; volume: 2;"
+        >
+        </a-gltf-model>
+      </a-entity>
       
     </a-scene>
     
   </body>
 </html>
-
-
