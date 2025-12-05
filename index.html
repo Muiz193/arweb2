@@ -1,182 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>Reproduction System</title>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>AR Model</title>
+    
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.2.0/dist/aframe-extras.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-
+    
     <script>
-      AFRAME.registerComponent('stabilized', {
-        schema: {
-          enabled: { type: 'boolean', default: true },
-          factor: { type: 'number', default: 0.1 } // Lower value = slower smoothing
-        },
-        init: function () {
-          this.targetEl = this.el.parentElement; // The mindar-image-target entity
-          this.smoothedPosition = new THREE.Vector3();
-          this.smoothedRotation = new THREE.Quaternion();
-          this.lastFound = false;
-        },
-        tick: function (t, dt) {
-          if (!this.data.enabled) return;
-
-          const isFound = this.targetEl.components['mindar-image-target'].is='targetFound';
-
-          if (isFound) {
-            // Get the raw transform data from the parent target
-            const rawPosition = this.targetEl.object3D.position;
-            const rawQuaternion = this.targetEl.object3D.quaternion;
-
-            if (!this.lastFound) {
-              // Initialize smoothing on first detection
-              this.smoothedPosition.copy(rawPosition);
-              this.smoothedRotation.copy(rawQuaternion);
-            } else {
-              // Apply exponential smoothing (Lerp for position, Slerp for rotation)
-              const factor = this.data.factor * (dt / 1000); // Normalize factor by time
-              
-              this.smoothedPosition.lerp(rawPosition, factor);
-              this.smoothedRotation.slerp(rawQuaternion, factor);
-            }
-
-            // Apply the smoothed transform to the child model
-            this.el.object3D.position.copy(this.smoothedPosition);
-            this.el.object3D.quaternion.copy(this.smoothedRotation);
-            
-            this.lastFound = true;
-
-          } else if (this.lastFound) {
-            // Target lost, stop smoothing
-            this.lastFound = false;
-          }
-        }
-      });
-    </script>
-
-    <style>
-      /* ... (Your original CSS styles remain here) ... */
-      /* Button Styles */
-      #quizButton, #animationButton {
-        position: absolute;
-        font-family: 'Inter', sans-serif;
-        font-weight: 700;
-        padding: 10px 20px;
-        background-color: rgba(0, 0, 0, 0.7);
-        color: white;
-        font-size: 16px;
-        border: none;
-        cursor: pointer;
-        z-index: 1000;
-        transition: 0.5s;
-        background-size: 200% auto;
-        box-shadow: 0 0 20px #eee;
-        border-radius: 10px;
-        display: block;
-        text-align: center;
-        text-transform: uppercase;
-      }
-
-      #quizButton {
-        top: 10px;
-        right: 10px;
-      }
-
-      #animationButton {
-        bottom: 10px;
-        left: 10px;
-      }
-
-      /* Gradient Button Effect */
-      .btn-grad {
-        background-image: linear-gradient(to right, #1D2B64 0%, #F8CDDA 51%, #1D2B64 100%);
-        margin: 10px;
-        padding: 15px 45px;
-        text-align: center;
-        text-transform: uppercase;
-        transition: 0.5s;
-        background-size: 200% auto;
-        color: white;
-        box-shadow: 0 0 20px #eee;
-        border-radius: 10px;
-        display: block;
-      }
-
-      .btn-grad:hover {
-        background-position: right center; /* change the direction of the change here */
-        color: #fff;
-        text-decoration: none;
-      }
-
-      /* Slider Container */
-      .switch-container {
-        position: absolute;
-        font-family: 'Inter', sans-serif;
-        font-weight: 700;
-        top: 25px;
-        left: 10px;
-        text-transform: uppercase;
-        z-index: 1000;
-        display: flex;
-        align-items: center;
-      }
-
-      /* Slider Label */
-      .switch-label {
-        margin-right: 10px;
-        color: white;
-        font-size: 16px;
-      }
-
-      /* Slider Toggle */
-      .switch {
-        position: relative;
-        display: inline-block;
-        width: 50px;
-        height: 25px;
-      }
-
-      .switch input {
-        display: none;
-      }
-
-      .slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: red;
-        transition: 0.4s;
-        border-radius: 25px;
-      }
-
-      .slider:before {
-        position: absolute;
-        content: "";
-        height: 19px;
-        width: 19px;
-        left: 3px;
-        bottom: 3px;
-        background-color: white;
-        transition: 0.4s;
-        border-radius: 50%;
-      }
-
-      input:checked + .slider {
-        background-color: green;
-      }
-
-      input:checked + .slider:before {
-        transform: translateX(25px);
-      }
-    </style>
-
-    <script>
-      // Gesture Detector Component for Rotation & Zoom (YOUR EXISTING CODE)
       AFRAME.registerComponent('gesture-detector', {
         schema: { enabled: { default: true }, sensitivity: { default: 0.5 }, zoomSpeed: { default: 0.01 } },
         init: function () {
@@ -185,7 +17,7 @@
           this.startY = 0;
           this.startRotation = { x: 0, y: 0 };
           
-          // *** UPDATED: Initial scale for gesture component must match model default ***
+          // *** Initial scale set to match the model scale 0.3 ***
           this.startScale = 0.3; 
 
           // Mouse Events (Rotation)
@@ -231,7 +63,7 @@
             // Pinch start
             this.startDistance = this.getTouchDistance(event.touches);
             this.startScale = this.el.getAttribute('scale').x;
-          } else if (event.touches.length === 1) { // Single touch only for rotation
+          } else if (event.touches.length === 1) {
             // Single touch (Rotation)
             this.onStart(event.touches[0]);
           }
@@ -243,7 +75,7 @@
             const newDistance = this.getTouchDistance(event.touches);
             const scaleFactor = newDistance / this.startDistance;
             
-            // *** UPDATED: Maximum zoom limit is increased from 1.5 to 3.0 to allow for larger scale ***
+            // Limit zoom between 0.05 and 3.0 (adjustable limits)
             const newScale = Math.min(Math.max(this.startScale * scaleFactor, 0.05), 3.0); 
             
             this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
@@ -257,7 +89,7 @@
           const scale = this.el.getAttribute('scale').x;
           let newScale = scale + (event.deltaY * -this.data.zoomSpeed);
           
-          // *** UPDATED: Maximum zoom limit is increased from 1.5 to 3.0 ***
+          // Limit zoom between 0.05 and 3.0 (adjustable limits)
           newScale = Math.min(Math.max(newScale, 0.05), 3.0); 
           
           this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
@@ -273,118 +105,46 @@
           this.isDragging = false;
         },
       });
-
-      // Function to show the quiz section
-      function showQuiz() {
-        document.getElementById('modelSection').style.display = 'none';
-        document.getElementById('quizSection').style.display = 'block';
-      }
-
-      // Function to show the 3D model section again
-      function showModels() {
-        document.getElementById('quizSection').style.display = 'none';
-        document.getElementById('modelSection').style.display = 'block';
-      }
     </script>
-</head>
-<body>
-    <div class="switch-container">
-      <span class="switch-label">Switch Models</span>
-      <label class="switch">
-        <input type="checkbox" id="modelToggle">
-        <span class="slider"></span>
-      </label>
-    </div>
-
-    <button id="quizButton" class="btn-grad" onclick="window.location.href = 'quiz.html';">Quiz</button>
-
-    <button id="animationButton" class="btn-grad">Animation</button>
+  </head>
+  <body>
 
     <a-scene 
-      mindar-image="imageTargetSrc: https://cdn.glitch.global/59785df9-049c-4a7a-b31c-2aa2f19a4065/targets%20(1).mind?v=1736313210650; 
-        filterMinCF: 0.0005; filterBeta: 0.002;" 
+      mindar-image="imageTargetSrc: /arweb2/targets.mind;" 
       color-space="sRGB" 
       renderer="colorManagement: true, physicallyCorrectLights" 
       vr-mode-ui="enabled: false" 
       device-orientation-permission-ui="enabled: false"
     >
+      <a-assets>
+        <a-asset-item id="hardAnimationModel" src="/arweb2/hardanimation.glb"></a-asset-item>
+        
+        <audio id="animationAudio" src="/arweb2/hardanimation.mp3" preload="auto"></audio> 
+      </a-assets>
 
-      <a-camera position="0 1.5 3" look-controls="enabled: false"></a-camera>
+
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
 
       <a-entity mindar-image-target="targetIndex: 0">
-        <a-gltf-model id="model0" rotation="0 0 0" position="0 0 0.01" 
+        
+        <a-gltf-model 
+          rotation="0 0 0" 
+          position="0 0 0.1" 
+          
           scale="0.3 0.3 0.3" 
+          
+          src="#hardAnimationModel" 
           animation-mixer 
-          gesture-detector 
-          stabilized="true">
+          
+          gesture-detector
+          
+          sound="src: #animationAudio; autoplay: true; loop: true; volume: 2;"
+        >
         </a-gltf-model>
       </a-entity>
-
-      <a-entity mindar-image-target="targetIndex: 1">
-        <a-gltf-model id="model1" rotation="0 0 0" position="0 0 0.01" 
-          scale="0.3 0.3 0.3" 
-          animation-mixer 
-          gesture-detector 
-          stabilized="true">
-        </a-gltf-model>
-      </a-entity>
-
-    </a-scene>
-
-    <script>
-      let model0 = document.getElementById('model0');
-      let model1 = document.getElementById('model1');
       
-      // Define 3D model URLs for both targets
-      let model0A = "https://cdn.glitch.global/59785df9-049c-4a7a-b31c-2aa2f19a4065/male%20latest%20trust%20me.glb?v=1736428305677";
-      let model0B = "https://cdn.glitch.global/59785df9-049c-4a7a-b31c-2aa2f19a4065/malemodelwithlabel(final).glb?v=1737643374778";
-
-      let model1A = "https://cdn.glitch.global/59785df9-049c-4a7a-b31c-2aa2f19a4065/female_pelvis_section_2blend(3).glb?v=1736428328417";
-      let model1B = "https://cdn.glitch.global/59785df9-049c-4a7a-b31c-2aa2f19a4065/femalemodelwithlabel(final).glb?v=1737643376106";
-
-      // Special animation model URL
-      let animationModel = "https://cdn.glitch.global/59785df9-049c-4a7a-b31c-2aa2f19a4065/fertilization.baru2.0.glb?v=1736433809921";
-
-      // Store the previous model states for both targets
-      let previousModel0 = model0A;
-      let previousModel1 = model1A;
-
-      // Start with initial models
-      model0.setAttribute('gltf-model', model0A);
-      model1.setAttribute('gltf-model', model1A);
-
-      // Toggle models when the slider is toggled
-      document.getElementById('modelToggle').addEventListener('change', function () {
-        // Toggle models for targetIndex: 0
-        if (model0.getAttribute('gltf-model') === model0A) {
-          previousModel0 = model0A;
-          model0.setAttribute('gltf-model', model0B);
-        } else {
-          model0.setAttribute('gltf-model', previousModel0);
-        }
-
-        // Toggle models for targetIndex: 1
-        if (model1.getAttribute('gltf-model') === model1A) {
-          previousModel1 = model1A;
-          model1.setAttribute('gltf-model', model1B);
-        } else {
-          model1.setAttribute('gltf-model', previousModel1);
-        }
-      });
-
-      // Set animation model when the Animation button is clicked
-      document.getElementById('animationButton').addEventListener('click', function () {
-        if (model0.getAttribute('gltf-model') === animationModel) {
-          // If animation model is active, revert to the previous model
-          model0.setAttribute('gltf-model', previousModel0);
-          model1.setAttribute('gltf-model', previousModel1);
-        } else {
-          // Set animation model
-          model0.setAttribute('gltf-model', animationModel);
-          model1.setAttribute('gltf-model', animationModel);  // Optional: Update both models
-        }
-      });
-    </script>
-
-</body>
+    </a-scene>
+    
+    </body>
 </html>
