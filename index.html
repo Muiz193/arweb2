@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>AR Model - World Interactive</title>
+    <title>AR Model - World Interactive with Audio Delay</title>
     
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.2.0/dist/aframe-extras.min.js"></script>
@@ -15,24 +15,37 @@
     </style>
     
     <script>
+      // *** CONFIGURABLE DELAY TIME (in seconds) ***
+      const audioDelaySeconds = 2; 
+      
       let audioPlayed = false;
       
+      // REVISED FUNCTION: Audio playback is now wrapped in a delay
       const playAudioFallback = () => {
           if (audioPlayed) return;
-          const audioEl = document.querySelector('#audio-files');
-          if (audioEl && audioEl.paused) {
-              audioEl.loop = true;
-              audioEl.volume = 0.5; // Set volume to 50%
-              audioEl.play().then(() => {
-                  audioPlayed = true;
-                  console.log("HTML Audio started successfully.");
-              }).catch(e => {
-                  console.warn("HTML Audio playback failed (browser block):", e);
-              });
-          }
+          
+          // Calculate delay in milliseconds
+          const delayMs = audioDelaySeconds * 1000;
+
+          // Set a timeout before attempting to play the audio
+          setTimeout(() => {
+              const audioEl = document.querySelector('#audio-files');
+              if (audioEl && audioEl.paused) {
+                  audioEl.loop = true;
+                  audioEl.volume = 0.5;
+
+                  audioEl.play().then(() => {
+                      audioPlayed = true;
+                      console.log(`HTML Audio started successfully after ${audioDelaySeconds} seconds.`);
+                  }).catch(e => {
+                      // This catch block will likely run if the browser still hasn't unlocked the Audio Context
+                      console.warn("HTML Audio playback failed (browser block), waiting for user interaction:", e);
+                  });
+              }
+          }, delayMs);
       };
 
-      // *** GESTURE DETECTOR COMPONENT (Enables rotation and zoom on the pinned model) ***
+      // *** GESTURE DETECTOR COMPONENT (Kept) ***
       AFRAME.registerComponent('gesture-detector', {
         schema: { enabled: { default: true }, sensitivity: { default: 0.5 }, zoomSpeed: { default: 0.01 } },
         init: function () {
@@ -40,9 +53,8 @@
           this.startX = 0;
           this.startY = 0;
           this.startRotation = { x: 0, y: 0 };
-          this.startScale = 10.0; // Initial scale
+          this.startScale = 10.0;
           
-          // Listeners are placed on the document body for global interaction after pinning
           const targetEl = document.body;
           
           targetEl.addEventListener('mousedown', (e) => this.onStart(e));
@@ -52,10 +64,9 @@
           targetEl.addEventListener('touchmove', (e) => this.onTouchMove(e));
           targetEl.addEventListener('touchend', () => this.onEnd());
           
-          this.el.sceneEl.addEventListener('wheel', (e) => this.onZoom(e)); // Wheel listener on scene
+          this.el.sceneEl.addEventListener('wheel', (e) => this.onZoom(e)); 
         },
         onStart: function (event) {
-          // Only start dragging if the model is visible (i.e., pinned)
           if (this.data.enabled && this.el.getAttribute('visible')) { 
             this.isDragging = true;
             this.startX = event.screenX;
@@ -137,12 +148,17 @@
                   modelEl.setAttribute('visible', true);
                   targetEl.object3D.visible = false;
                   
-                  playAudioFallback();
+                  // ** AUDIO FALLBACK TRIGGER **
+                  // Play is now delayed inside playAudioFallback()
+                  playAudioFallback(); 
 
+                  // Set up listener for user interaction to force audio playback immediately (no delay)
+                  // We add a listener for the required user action to unlock audio, but that action *also*
+                  // triggers the delayed play attempt if it hasn't happened yet.
                   document.body.addEventListener('touchstart', playAudioFallback, { once: true });
                   document.body.addEventListener('click', playAudioFallback, { once: true });
                   
-                  console.log("Model pinned. Waiting for user interaction to confirm audio.");
+                  console.log("Model pinned. Audio delay active.");
               }, 100);
           };
 
@@ -173,7 +189,9 @@
         </a-assets>
 
       <audio id="audio-files" preload="auto" style="display:none;">
-          <source src="/arweb2/animationaudio.ogg" type="audio/ogg">
+          <source src="/arweb2/hardanimation.ogg" type="audio/ogg">
+          <source src="/arweb2/hardanimation.mp3" type="audio/mpeg">
+          <source src="/arweb2/hardanimation.wav" type="audio/wav">
           Your browser does not support the audio element.
       </audio>
 
@@ -198,4 +216,3 @@
     
   </body>
 </html>
-
