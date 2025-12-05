@@ -2,13 +2,14 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>AR Model - Pinned Fix</title>
+    <title>AR Model - Pinned Final</title>
     
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.2.0/dist/aframe-extras.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <script>
+      // *** YOUR EXISTING GESTURE DETECTOR COMPONENT (Kept) ***
       AFRAME.registerComponent('gesture-detector', {
         schema: { enabled: { default: true }, sensitivity: { default: 0.5 }, zoomSpeed: { default: 0.01 } },
         init: function () {
@@ -81,38 +82,41 @@
     </script>
     
     <script>
-      AFRAME.registerComponent('pin-on-found', {
+      AFRAME.registerComponent('mindar-pinning-model', {
+        schema: {
+          targetId: { type: 'string' } // ID of the mindar-image-target (e.g., #target-0)
+        },
         init: function() {
-          const targetEl = this.el.parentElement; // The mindar-image-target entity
-          const modelEl = this.el; // The gltf-model entity
-          const sceneEl = modelEl.sceneEl; // The scene element
+          const targetEl = document.querySelector(this.data.targetId);
+          const modelEl = this.el;
+          
+          let isPinned = false;
 
           targetEl.addEventListener('targetFound', () => {
-            // 1. Get the current position and rotation in WORLD coordinates
-            const modelWorldPos = new THREE.Vector3();
-            const modelWorldRot = new THREE.Quaternion();
-            modelEl.object3D.getWorldPosition(modelWorldPos);
-            modelEl.object3D.getWorldQuaternion(modelWorldRot);
+            if (isPinned) return;
             
-            // 2. Detach model from the marker entity
-            targetEl.object3D.remove(modelEl.object3D);
+            // Wait for one more frame to ensure position is stable
+            setTimeout(() => {
+              // 1. Get the world position/rotation from the marker
+              const worldPos = new THREE.Vector3();
+              const worldRot = new THREE.Quaternion();
+              targetEl.object3D.getWorldPosition(worldPos);
+              targetEl.object3D.getWorldQuaternion(worldRot);
 
-            // 3. Attach model directly to the scene
-            sceneEl.object3D.add(modelEl.object3D);
-            
-            // 4. Set the model's new position/rotation to the WORLD coordinates it had
-            modelEl.object3D.position.copy(modelWorldPos);
-            modelEl.object3D.quaternion.copy(modelWorldRot);
+              // 2. Apply world transformation to the model (since it's a child of the scene)
+              modelEl.object3D.position.copy(worldPos);
+              modelEl.object3D.quaternion.copy(worldRot);
 
-            // 5. Hide the target marker tracking entity completely
-            targetEl.object3D.visible = false;
-            
-            // Optional: Disable tracking updates entirely after successful pin
-            // (Note: MindAR usually stops tracking invisible targets, but this is an extra layer)
-            targetEl.components['mindar-image-target'].pause();
-
-            console.log("Model successfully pinned to scene! Marker tracking stopped.");
-          }, { once: true });
+              // 3. Make the model visible
+              modelEl.setAttribute('visible', true);
+              
+              // 4. Disable the marker tracking entity's visibility (to stop updates)
+              targetEl.object3D.visible = false;
+              
+              isPinned = true;
+              console.log("Model pinned to world successfully!");
+            }, 100); // 100ms delay to ensure stable tracking position
+          }, { once: true }); // Only runs once
         }
       });
     </script>
@@ -120,9 +124,7 @@
   <body>
 
     <a-scene 
-      mindar-image="imageTargetSrc: /arweb2/targets.mind; 
-        filterMinCF: 0.0001; 
-        filterBeta: 1000;" 
+      mindar-image="imageTargetSrc: /arweb2/targets.mind;" 
       color-space="sRGB" 
       renderer="colorManagement: true, physicallyCorrectLights" 
       vr-mode-ui="enabled: false" 
@@ -133,25 +135,25 @@
         <audio id="animationAudio" src="/arweb2/hardanimation.mp3" preload="auto"></audio> 
       </a-assets>
 
-
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-
-      <a-entity mindar-image-target="targetIndex: 0">
+      <a-entity mindar-image-target="targetIndex: 0" id="target-0"></a-entity>
         
-        <a-gltf-model 
-          rotation="0 0 0" 
-          position="0 0 0.1" 
-          scale="0.3 0.3 0.3" 
-          src="#hardAnimationModel" 
-          animation-mixer 
-          gesture-detector
-          sound="src: #animationAudio; autoplay: true; loop: true; volume: 2;"
-          
-          pin-on-found
-        >
-        </a-gltf-model>
-      </a-entity>
+      <a-gltf-model 
+        id="pinned-model"
+        rotation="0 0 0" 
+        position="0 0 0" 
+        scale="0.3 0.3 0.3" 
+        src="#hardAnimationModel" 
+        animation-mixer 
+        gesture-detector
+        sound="src: #animationAudio; autoplay: true; loop: true; volume: 2;"
+        
+        visible="false"
+        
+        mindar-pinning-model="targetId: #target-0"
+      >
+      </a-gltf-model>
       
     </a-scene>
     
