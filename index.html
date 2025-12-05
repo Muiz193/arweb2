@@ -2,14 +2,13 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>AR Model - Pinned</title>
+    <title>AR Model - Pinned Fix</title>
     
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.2.0/dist/aframe-extras.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <script>
-      // *** YOUR EXISTING GESTURE DETECTOR COMPONENT (Unchanged) ***
       AFRAME.registerComponent('gesture-detector', {
         schema: { enabled: { default: true }, sensitivity: { default: 0.5 }, zoomSpeed: { default: 0.01 } },
         init: function () {
@@ -18,18 +17,14 @@
           this.startY = 0;
           this.startRotation = { x: 0, y: 0 };
           this.startScale = 0.3; 
-
           this.el.sceneEl.addEventListener('mousedown', (e) => this.onStart(e));
           this.el.sceneEl.addEventListener('mousemove', (e) => this.onMove(e));
           this.el.sceneEl.addEventListener('mouseup', (e) => this.onEnd(e));
-
           this.el.sceneEl.addEventListener('touchstart', (e) => this.onTouchStart(e));
           this.el.sceneEl.addEventListener('touchmove', (e) => this.onTouchMove(e));
           this.el.sceneEl.addEventListener('touchend', () => this.onEnd());
-
           this.el.sceneEl.addEventListener('wheel', (e) => this.onZoom(e));
         },
-        
         onStart: function (event) {
           if (this.data.enabled) {
             this.isDragging = true;
@@ -39,21 +34,17 @@
             this.startRotation = { x: currentRotation.x, y: currentRotation.y };
           }
         },
-
         onMove: function (event) {
           if (this.isDragging && this.data.enabled) {
             const deltaX = event.screenX - this.startX;
             const deltaY = event.screenY - this.startY;
-
             const newRotation = {
               x: this.startRotation.x - deltaY * this.data.sensitivity, 
               y: this.startRotation.y + deltaX * this.data.sensitivity, 
             };
-
             this.el.setAttribute('rotation', newRotation);
           }
         },
-
         onTouchStart: function (event) {
           if (event.touches.length === 2) {
             this.startDistance = this.getTouchDistance(event.touches);
@@ -62,7 +53,6 @@
             this.onStart(event.touches[0]);
           }
         },
-
         onTouchMove: function (event) {
           if (event.touches.length === 2) {
             const newDistance = this.getTouchDistance(event.touches);
@@ -73,20 +63,17 @@
             this.onMove(event.touches[0]);
           }
         },
-
         onZoom: function (event) {
           const scale = this.el.getAttribute('scale').x;
           let newScale = scale + (event.deltaY * -this.data.zoomSpeed);
           newScale = Math.min(Math.max(newScale, 0.05), 3.0); 
           this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
         },
-
         getTouchDistance: function (touches) {
           const dx = touches[0].clientX - touches[1].clientX;
           const dy = touches[0].clientY - touches[1].clientY;
           return Math.sqrt(dx * dx + dy * dy);
         },
-
         onEnd: function () {
           this.isDragging = false;
         },
@@ -98,29 +85,33 @@
         init: function() {
           const targetEl = this.el.parentElement; // The mindar-image-target entity
           const modelEl = this.el; // The gltf-model entity
-          let isPinned = false;
+          const sceneEl = modelEl.sceneEl; // The scene element
 
           targetEl.addEventListener('targetFound', () => {
-            if (isPinned) return;
-
-            // 1. Get the current position and rotation relative to the camera
-            const camera = modelEl.sceneEl.camera.el;
+            // 1. Get the current position and rotation in WORLD coordinates
             const modelWorldPos = new THREE.Vector3();
             const modelWorldRot = new THREE.Quaternion();
-            
-            // Get the model's current world transform (while it's being tracked)
             modelEl.object3D.getWorldPosition(modelWorldPos);
             modelEl.object3D.getWorldQuaternion(modelWorldRot);
             
-            // 2. Detach the model from the marker and attach it directly to the camera
-            // The model is now fixed relative to the camera's current position (pinned in the world)
-            camera.object3D.attach(modelEl.object3D);
+            // 2. Detach model from the marker entity
+            targetEl.object3D.remove(modelEl.object3D);
 
-            // 3. Prevent the target entity from being tracked/updated further
+            // 3. Attach model directly to the scene
+            sceneEl.object3D.add(modelEl.object3D);
+            
+            // 4. Set the model's new position/rotation to the WORLD coordinates it had
+            modelEl.object3D.position.copy(modelWorldPos);
+            modelEl.object3D.quaternion.copy(modelWorldRot);
+
+            // 5. Hide the target marker tracking entity completely
             targetEl.object3D.visible = false;
             
-            isPinned = true;
-            console.log("Model pinned to world upon first detection!");
+            // Optional: Disable tracking updates entirely after successful pin
+            // (Note: MindAR usually stops tracking invisible targets, but this is an extra layer)
+            targetEl.components['mindar-image-target'].pause();
+
+            console.log("Model successfully pinned to scene! Marker tracking stopped.");
           }, { once: true });
         }
       });
@@ -150,7 +141,7 @@
         
         <a-gltf-model 
           rotation="0 0 0" 
-          position="0 0 0" 
+          position="0 0 0.1" 
           scale="0.3 0.3 0.3" 
           src="#hardAnimationModel" 
           animation-mixer 
@@ -166,4 +157,3 @@
     
   </body>
 </html>
-
