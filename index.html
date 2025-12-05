@@ -2,14 +2,37 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>AR Model - Robust Audio Fix</title>
+    <title>AR Model - World Interactive</title>
     
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.2.0/dist/aframe-extras.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
+    <style>
+      .matrix-ctrl, .prompt-msg {
+        display: none !important;
+      }
+    </style>
+    
     <script>
-      // *** GESTURE DETECTOR COMPONENT (Kept) ***
+      let audioPlayed = false;
+      
+      const playAudioFallback = () => {
+          if (audioPlayed) return;
+          const audioEl = document.querySelector('#audio-files');
+          if (audioEl && audioEl.paused) {
+              audioEl.loop = true;
+              audioEl.volume = 0.5; // Set volume to 50%
+              audioEl.play().then(() => {
+                  audioPlayed = true;
+                  console.log("HTML Audio started successfully.");
+              }).catch(e => {
+                  console.warn("HTML Audio playback failed (browser block):", e);
+              });
+          }
+      };
+
+      // *** GESTURE DETECTOR COMPONENT (Enables rotation and zoom on the pinned model) ***
       AFRAME.registerComponent('gesture-detector', {
         schema: { enabled: { default: true }, sensitivity: { default: 0.5 }, zoomSpeed: { default: 0.01 } },
         init: function () {
@@ -17,17 +40,23 @@
           this.startX = 0;
           this.startY = 0;
           this.startRotation = { x: 0, y: 0 };
-          this.startScale = 10.0; 
-          this.el.sceneEl.addEventListener('mousedown', (e) => this.onStart(e));
-          this.el.sceneEl.addEventListener('mousemove', (e) => this.onMove(e));
-          this.el.sceneEl.addEventListener('mouseup', (e) => this.onEnd(e));
-          this.el.sceneEl.addEventListener('touchstart', (e) => this.onTouchStart(e));
-          this.el.sceneEl.addEventListener('touchmove', (e) => this.onTouchMove(e));
-          this.el.sceneEl.addEventListener('touchend', () => this.onEnd());
-          this.el.sceneEl.addEventListener('wheel', (e) => this.onZoom(e));
+          this.startScale = 10.0; // Initial scale
+          
+          // Listeners are placed on the document body for global interaction after pinning
+          const targetEl = document.body;
+          
+          targetEl.addEventListener('mousedown', (e) => this.onStart(e));
+          targetEl.addEventListener('mousemove', (e) => this.onMove(e));
+          targetEl.addEventListener('mouseup', (e) => this.onEnd(e));
+          targetEl.addEventListener('touchstart', (e) => this.onTouchStart(e));
+          targetEl.addEventListener('touchmove', (e) => this.onTouchMove(e));
+          targetEl.addEventListener('touchend', () => this.onEnd());
+          
+          this.el.sceneEl.addEventListener('wheel', (e) => this.onZoom(e)); // Wheel listener on scene
         },
         onStart: function (event) {
-          if (this.data.enabled) {
+          // Only start dragging if the model is visible (i.e., pinned)
+          if (this.data.enabled && this.el.getAttribute('visible')) { 
             this.isDragging = true;
             this.startX = event.screenX;
             this.startY = event.screenY;
@@ -68,7 +97,7 @@
           const scale = this.el.getAttribute('scale').x;
           let newScale = scale + (event.deltaY * -this.data.zoomSpeed);
           newScale = Math.min(Math.max(newScale, 0.05), 30.0); 
-            this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
+          this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
         },
         getTouchDistance: function (touches) {
           const dx = touches[0].clientX - touches[1].clientX;
@@ -82,23 +111,6 @@
     </script>
     
     <script>
-      let audioPlayed = false;
-      
-      const playAudioFallback = () => {
-          if (audioPlayed) return;
-          const audioEl = document.querySelector('#audio-files');
-          if (audioEl && audioEl.paused) {
-              audioEl.loop = true;
-              audioEl.volume = 0.5; // Set volume to 50%
-              audioEl.play().then(() => {
-                  audioPlayed = true;
-                  console.log("HTML Audio started successfully.");
-              }).catch(e => {
-                  console.warn("HTML Audio playback failed (browser block):", e);
-              });
-          }
-      };
-
       AFRAME.registerComponent('pin-and-play-audio', {
         init: function() {
           const targetEl = document.querySelector('#target-0');
@@ -125,11 +137,8 @@
                   modelEl.setAttribute('visible', true);
                   targetEl.object3D.visible = false;
                   
-                  // ** AUDIO FALLBACK TRIGGER **
-                  // Immediately try to play audio after pinning
                   playAudioFallback();
 
-                  // Set up listener for user interaction to force audio playback
                   document.body.addEventListener('touchstart', playAudioFallback, { once: true });
                   document.body.addEventListener('click', playAudioFallback, { once: true });
                   
@@ -161,11 +170,12 @@
     >
       <a-assets>
         <a-asset-item id="hardAnimationModel" src="/arweb2/hardanimation.glb"></a-asset-item>
-        
         </a-assets>
 
       <audio id="audio-files" preload="auto" style="display:none;">
           <source src="/arweb2/hardanimation.ogg" type="audio/ogg">
+          <source src="/arweb2/hardanimation.mp3" type="audio/mpeg">
+          <source src="/arweb2/hardanimation.wav" type="audio/wav">
           Your browser does not support the audio element.
       </audio>
 
@@ -181,7 +191,6 @@
         src="#hardAnimationModel" 
         animation-mixer 
         gesture-detector
-        
         visible="false"
         pin-and-play-audio="targetId: #target-0"
       >
