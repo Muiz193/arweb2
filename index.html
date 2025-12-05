@@ -17,7 +17,7 @@
           this.startX = 0;
           this.startY = 0;
           this.startRotation = { x: 0, y: 0 };
-          this.startScale = 8.0; 
+          this.startScale = 15.0; 
           this.el.sceneEl.addEventListener('mousedown', (e) => this.onStart(e));
           this.el.sceneEl.addEventListener('mousemove', (e) => this.onMove(e));
           this.el.sceneEl.addEventListener('mouseup', (e) => this.onEnd(e));
@@ -58,7 +58,7 @@
           if (event.touches.length === 2) {
             const newDistance = this.getTouchDistance(event.touches);
             const scaleFactor = newDistance / this.startDistance;
-            const newScale = Math.min(Math.max(this.startScale * scaleFactor, 0.05), 10.0); 
+            const newScale = Math.min(Math.max(this.startScale * scaleFactor, 0.05), 30.0); 
             this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
           } else if (event.touches.length === 1) {
             this.onMove(event.touches[0]);
@@ -169,12 +169,12 @@
         id="pinned-model"
         rotation="0 0 0" 
         position="0 0 0" 
-        scale="8.0 8.0 8.0" 
+        scale="15.0 15.0 15.0" 
         src="#hardAnimationModel" 
         animation-mixer 
         gesture-detector
         
-        sound="src: #animationAudio; autoplay: false; loop: true; volume: 2;"
+        sound="src: #animationAudio; autoplay: false; loop: true; volume: 5;"
         
         visible="false"
         
@@ -186,3 +186,4 @@
     
   </body>
 </html>
+
