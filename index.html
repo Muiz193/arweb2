@@ -2,13 +2,36 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>AR Model</title>
+    <title>AR Model - Pinned Final</title>
     
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.2.0/dist/aframe-extras.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
+    <style>
+      .matrix-ctrl, .prompt-msg {
+        display: none !important;
+      }
+    </style>
+    
     <script>
+      let audioPlayed = false;
+      
+      const playAudioFallback = () => {
+          if (audioPlayed) return;
+          const audioEl = document.querySelector('#audio-files');
+          if (audioEl && audioEl.paused) {
+              audioEl.loop = true;
+              audioEl.volume = 0.5; // Set volume to 50%
+              audioEl.play().then(() => {
+                  audioPlayed = true;
+                  console.log("HTML Audio started successfully.");
+              }).catch(e => {
+                  console.warn("HTML Audio playback failed (browser block):", e);
+              });
+          }
+      };
+
       // *** GESTURE DETECTOR COMPONENT (Kept) ***
       AFRAME.registerComponent('gesture-detector', {
         schema: { enabled: { default: true }, sensitivity: { default: 0.5 }, zoomSpeed: { default: 0.01 } },
@@ -68,7 +91,7 @@
           const scale = this.el.getAttribute('scale').x;
           let newScale = scale + (event.deltaY * -this.data.zoomSpeed);
           newScale = Math.min(Math.max(newScale, 0.05), 30.0); 
-            this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
+          this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
         },
         getTouchDistance: function (touches) {
           const dx = touches[0].clientX - touches[1].clientX;
@@ -82,23 +105,6 @@
     </script>
     
     <script>
-      let audioPlayed = false;
-      
-      const playAudioFallback = () => {
-          if (audioPlayed) return;
-          const audioEl = document.querySelector('#audio-files');
-          if (audioEl && audioEl.paused) {
-              audioEl.loop = true;
-              audioEl.volume = 0.5; // Set volume to 50%
-              audioEl.play().then(() => {
-                  audioPlayed = true;
-                  console.log("HTML Audio started successfully.");
-              }).catch(e => {
-                  console.warn("HTML Audio playback failed (browser block):", e);
-              });
-          }
-      };
-
       AFRAME.registerComponent('pin-and-play-audio', {
         init: function() {
           const targetEl = document.querySelector('#target-0');
@@ -126,7 +132,6 @@
                   targetEl.object3D.visible = false;
                   
                   // ** AUDIO FALLBACK TRIGGER **
-                  // Immediately try to play audio after pinning
                   playAudioFallback();
 
                   // Set up listener for user interaction to force audio playback
@@ -161,11 +166,12 @@
     >
       <a-assets>
         <a-asset-item id="hardAnimationModel" src="/arweb2/hardanimation.glb"></a-asset-item>
-        
         </a-assets>
 
       <audio id="audio-files" preload="auto" style="display:none;">
           <source src="/arweb2/hardanimation.ogg" type="audio/ogg">
+          <source src="/arweb2/hardanimation.mp3" type="audio/mpeg">
+          <source src="/arweb2/hardanimation.wav" type="audio/wav">
           Your browser does not support the audio element.
       </audio>
 
@@ -181,7 +187,6 @@
         src="#hardAnimationModel" 
         animation-mixer 
         gesture-detector
-        
         visible="false"
         pin-and-play-audio="targetId: #target-0"
       >
@@ -191,5 +196,3 @@
     
   </body>
 </html>
-
-
