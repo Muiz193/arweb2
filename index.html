@@ -2,13 +2,14 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>AR Model</title>
+    <title>AR Model - Pinned</title>
     
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.2.0/dist/aframe-extras.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <script>
+      // *** YOUR EXISTING GESTURE DETECTOR COMPONENT (Unchanged) ***
       AFRAME.registerComponent('gesture-detector', {
         schema: { enabled: { default: true }, sensitivity: { default: 0.5 }, zoomSpeed: { default: 0.01 } },
         init: function () {
@@ -16,21 +17,16 @@
           this.startX = 0;
           this.startY = 0;
           this.startRotation = { x: 0, y: 0 };
-          
-          // *** Initial scale set to match the model scale 0.3 ***
           this.startScale = 0.3; 
 
-          // Mouse Events (Rotation)
           this.el.sceneEl.addEventListener('mousedown', (e) => this.onStart(e));
           this.el.sceneEl.addEventListener('mousemove', (e) => this.onMove(e));
           this.el.sceneEl.addEventListener('mouseup', (e) => this.onEnd(e));
 
-          // Touch Events (Rotation & Pinch-Zoom)
           this.el.sceneEl.addEventListener('touchstart', (e) => this.onTouchStart(e));
           this.el.sceneEl.addEventListener('touchmove', (e) => this.onTouchMove(e));
           this.el.sceneEl.addEventListener('touchend', () => this.onEnd());
 
-          // Mouse Wheel (Zoom)
           this.el.sceneEl.addEventListener('wheel', (e) => this.onZoom(e));
         },
         
@@ -60,27 +56,20 @@
 
         onTouchStart: function (event) {
           if (event.touches.length === 2) {
-            // Pinch start
             this.startDistance = this.getTouchDistance(event.touches);
             this.startScale = this.el.getAttribute('scale').x;
           } else if (event.touches.length === 1) {
-            // Single touch (Rotation)
             this.onStart(event.touches[0]);
           }
         },
 
         onTouchMove: function (event) {
           if (event.touches.length === 2) {
-            // Handle pinch zoom
             const newDistance = this.getTouchDistance(event.touches);
             const scaleFactor = newDistance / this.startDistance;
-            
-            // Limit zoom between 0.05 and 3.0 (adjustable limits)
             const newScale = Math.min(Math.max(this.startScale * scaleFactor, 0.05), 3.0); 
-            
             this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
           } else if (event.touches.length === 1) {
-            // Single touch (Rotation)
             this.onMove(event.touches[0]);
           }
         },
@@ -88,10 +77,7 @@
         onZoom: function (event) {
           const scale = this.el.getAttribute('scale').x;
           let newScale = scale + (event.deltaY * -this.data.zoomSpeed);
-          
-          // Limit zoom between 0.05 and 3.0 (adjustable limits)
           newScale = Math.min(Math.max(newScale, 0.05), 3.0); 
-          
           this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
         },
 
@@ -106,11 +92,46 @@
         },
       });
     </script>
+    
+    <script>
+      AFRAME.registerComponent('pin-on-found', {
+        init: function() {
+          const targetEl = this.el.parentElement; // The mindar-image-target entity
+          const modelEl = this.el; // The gltf-model entity
+          let isPinned = false;
+
+          targetEl.addEventListener('targetFound', () => {
+            if (isPinned) return;
+
+            // 1. Get the current position and rotation relative to the camera
+            const camera = modelEl.sceneEl.camera.el;
+            const modelWorldPos = new THREE.Vector3();
+            const modelWorldRot = new THREE.Quaternion();
+            
+            // Get the model's current world transform (while it's being tracked)
+            modelEl.object3D.getWorldPosition(modelWorldPos);
+            modelEl.object3D.getWorldQuaternion(modelWorldRot);
+            
+            // 2. Detach the model from the marker and attach it directly to the camera
+            // The model is now fixed relative to the camera's current position (pinned in the world)
+            camera.object3D.attach(modelEl.object3D);
+
+            // 3. Prevent the target entity from being tracked/updated further
+            targetEl.object3D.visible = false;
+            
+            isPinned = true;
+            console.log("Model pinned to world upon first detection!");
+          }, { once: true });
+        }
+      });
+    </script>
   </head>
   <body>
 
     <a-scene 
-      mindar-image="imageTargetSrc: /arweb2/targets.mind;" 
+      mindar-image="imageTargetSrc: /arweb2/targets.mind; 
+        filterMinCF: 0.0001; 
+        filterBeta: 1000;" 
       color-space="sRGB" 
       renderer="colorManagement: true, physicallyCorrectLights" 
       vr-mode-ui="enabled: false" 
@@ -118,7 +139,6 @@
     >
       <a-assets>
         <a-asset-item id="hardAnimationModel" src="/arweb2/hardanimation.glb"></a-asset-item>
-        
         <audio id="animationAudio" src="/arweb2/hardanimation.mp3" preload="auto"></audio> 
       </a-assets>
 
@@ -131,20 +151,18 @@
         <a-gltf-model 
           rotation="0 0 0" 
           position="0 0 0.1" 
-          
           scale="0.3 0.3 0.3" 
-          
           src="#hardAnimationModel" 
           animation-mixer 
-          
           gesture-detector
-          
           sound="src: #animationAudio; autoplay: true; loop: true; volume: 2;"
+          
+          pin-on-found
         >
         </a-gltf-model>
       </a-entity>
       
     </a-scene>
     
-    </body>
+  </body>
 </html>
