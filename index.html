@@ -94,7 +94,7 @@
           if (event.touches.length === 2) {
             const newDistance = this.getTouchDistance(event.touches);
             const scaleFactor = newDistance / this.startDistance;
-            const newScale = Math.min(Math.max(this.startScale * scaleFactor, 0.05), 50.0); 
+            const newScale = Math.min(Math.max(this.startScale * scaleFactor, 0.05), 300.0); 
             this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
           } else if (event.touches.length === 1) {
             this.onMove(event.touches[0]);
@@ -193,7 +193,7 @@
         id="pinned-model"
         rotation="0 0 0" 
         position="0 0 0" 
-        scale="10.0 10.0 10.0" 
+        scale="30.0 30.0 30.0" 
         src="#hardAnimationModel" 
         animation-mixer 
         gesture-detector
@@ -206,6 +206,7 @@
     
   </body>
 </html>
+
 
 
 
