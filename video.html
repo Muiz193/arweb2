@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>AR Video Player</title>
+    
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    
+    <style>
+      .matrix-ctrl, .prompt-msg { display: none !important; }
+      
+      /* STYLE FOR THE TOP RIGHT BUTTON */
+      .nav-button {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        padding: 10px 20px;
+        background-color: white;
+        border: 2px solid #333;
+        border-radius: 8px;
+        font-family: sans-serif;
+        font-weight: bold;
+        text-decoration: none;
+        color: black;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      }
+    </style>
+
+    <script>
+      // SCRIPT TO PLAY VIDEO ON CLICK (Required by browsers)
+      document.addEventListener("DOMContentLoaded", function() {
+        const video = document.querySelector("#ar-video");
+        
+        // Play video when user clicks anywhere on screen
+        document.body.addEventListener('click', () => {
+           if(video && video.paused) {
+             video.play();
+           }
+        });
+
+        // Also try to play when target is found
+        const target = document.querySelector('#target-0');
+        target.addEventListener("targetFound", event => {
+          console.log("Target found");
+          if(video) video.play();
+        });
+        
+        target.addEventListener("targetLost", event => {
+          console.log("Target lost");
+          if(video) video.pause();
+        });
+      });
+    </script>
+  </head>
+  <body>
+
+    <a href="./index.html" class="nav-button">View 3D Model 🧊</a>
+
+    <a-scene 
+      mindar-image="imageTargetSrc: ./newtarget.mind;" 
+      color-space="sRGB" 
+      renderer="colorManagement: true, physicallyCorrectLights" 
+      vr-mode-ui="enabled: false" 
+      device-orientation-permission-ui="enabled: false"
+    >
+      <a-assets>
+        <video id="ar-video" src="./video.mp4" preload="auto" loop="true" playsinline webkit-playsinline crossorigin="anonymous"></video>
+      </a-assets>
+
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+      <a-entity mindar-image-target="targetIndex: 0" id="target-0">
+          <a-video src="#ar-video" width="1" height="0.5625" position="0 0 0" rotation="0 0 0"></a-video>
+      </a-entity>
+    </a-scene>
+  </body>
+</html>
