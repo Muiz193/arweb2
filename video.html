@@ -4,33 +4,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <title>AR Video Player</title>
     
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <style>
       .matrix-ctrl, .prompt-msg { display: none !important; }
       
-      /* BUTTON STYLE */
       .nav-button {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        z-index: 1000;
-        padding: 10px 20px;
-        background-color: white;
-        border: 2px solid #333;
-        border-radius: 8px;
-        font-family: sans-serif;
-        font-weight: bold;
-        text-decoration: none;
-        color: black;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        position: absolute; top: 20px; right: 20px; z-index: 1000;
+        padding: 10px 20px; background-color: white; border: 2px solid #333;
+        border-radius: 8px; font-family: sans-serif; font-weight: bold;
+        text-decoration: none; color: black; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
       }
     </style>
 
     <script>
       // *** 1. GESTURE DETECTOR (Zoom/Rotate) ***
-      // Adapted from your code to work with Video
       AFRAME.registerComponent('gesture-detector', {
         schema: { enabled: { default: true }, sensitivity: { default: 0.5 }, zoomSpeed: { default: 0.01 } },
         init: function () {
@@ -38,7 +27,6 @@
           this.startX = 0;
           this.startY = 0;
           this.startRotation = { x: 0, y: 0 };
-          // For video, we start at scale 1.0 (instead of 10.0 like the 3D model)
           this.startScale = 1.0; 
           
           const targetEl = document.body;
@@ -84,7 +72,6 @@
           if (event.touches.length === 2) {
             const newDistance = this.getTouchDistance(event.touches);
             const scaleFactor = newDistance / this.startDistance;
-            // Limit video scale: Min 0.5, Max 10.0
             const newScale = Math.min(Math.max(this.startScale * scaleFactor, 0.5), 10.0); 
             this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
           } else if (event.touches.length === 1) {
@@ -109,46 +96,36 @@
     </script>
 
     <script>
-      // *** 2. PINNING + DELAYED AUDIO + VIDEO LOGIC ***
+      // *** 2. PINNING + AUDIO DELAY LOGIC ***
       AFRAME.registerComponent('pin-and-control-video', {
         init: function() {
           const targetEl = document.querySelector('#target-0');
           const videoEntity = this.el;
           
-          // MEDIA ELEMENTS
           const videoElement = document.querySelector('#ar-video');
           const audioElement = document.querySelector('#ar-audio'); 
 
           let isPinned = false;
           let targetFound = false;
-          let mediaPlayed = false;
-
-          // CONFIGURABLE DELAY (0.2s)
+          
+          // CONFIGURABLE DELAY
           const audioDelaySeconds = 0.2;
 
-          // Function to play media safely
-          const playMediaFallback = () => {
-              if (mediaPlayed) return;
-
+          const playMediaDelayed = () => {
               const delayMs = audioDelaySeconds * 1000;
               
-              // Wait 0.2s before playing
               setTimeout(() => {
                   // Play Video
                   if(videoElement && videoElement.paused) {
                       videoElement.play().then(() => {
-                          // Optional: videoElement.muted = false; 
-                      }).catch(e => console.log("Video autoplay blocked"));
+                         // videoElement.muted = false; // Optional: Unmute video sound
+                      }).catch(e => console.log("Video blocked"));
                   }
-                  
                   // Play Audio
                   if (audioElement && audioElement.paused) {
                       audioElement.loop = true;
                       audioElement.volume = 0.5;
-                      audioElement.play().then(() => {
-                          mediaPlayed = true;
-                          console.log(`Audio started after ${audioDelaySeconds}s delay.`);
-                      }).catch(e => console.warn("Audio blocked"));
+                      audioElement.play().catch(e => console.warn("Audio blocked"));
                   }
               }, delayMs);
           };
@@ -157,7 +134,7 @@
               if (isPinned || !targetFound) return;
               isPinned = true;
 
-              // 1. Copy Position/Rotation from Target
+              // 1. Copy Transform
               const worldPos = new THREE.Vector3();
               const worldRot = new THREE.Quaternion();
               targetEl.object3D.getWorldPosition(worldPos);
@@ -166,25 +143,24 @@
               videoEntity.object3D.position.copy(worldPos);
               videoEntity.object3D.quaternion.copy(worldRot);
 
-              // 2. Show Video Entity, Hide Target
+              // 2. Swap Visibility
               videoEntity.setAttribute('visible', true);
               targetEl.object3D.visible = false;
               
-              // 3. Trigger Delayed Play
-              playMediaFallback();
+              // 3. Play
+              playMediaDelayed();
 
-              // 4. Add User Interaction Fallback (Click to play)
-              const fallbackListener = () => {
+              // 4. Fallback Click
+              const fallback = () => {
                   if(videoElement.paused) videoElement.play();
                   if(audioElement.paused) audioElement.play();
               };
-              document.body.addEventListener('click', fallbackListener, { once: true });
-              document.body.addEventListener('touchstart', fallbackListener, { once: true });
-              
-              console.log("Video pinned. Waiting for delay...");
+              document.body.addEventListener('click', fallback, { once: true });
+              document.body.addEventListener('touchstart', fallback, { once: true });
           };
 
           targetEl.addEventListener('targetFound', () => {
+              console.log("Target Found! Pinning video...");
               targetFound = true;
               executePinning();
           }, { once: true });
@@ -194,7 +170,7 @@
   </head>
   <body>
 
-    <a href="./index.html" class="nav-button">View 3D Model </a>
+    <a href="./index.html" class="nav-button">View 3D Model 🧊</a>
 
     <a-scene 
       mindar-image="imageTargetSrc: ./newtarget.mind;" 
@@ -205,7 +181,6 @@
     >
       <a-assets>
         <video id="ar-video" src="./video.mp4" preload="auto" loop="true" playsinline webkit-playsinline crossorigin="anonymous" muted></video>
-        
         <audio id="ar-audio" src="./animationaudiolatest.ogg" preload="auto" loop="true"></audio>
       </a-assets>
 
