@@ -29,7 +29,8 @@
     </style>
 
     <script>
-      // *** 1. GESTURE DETECTOR (Same as index.html) ***
+      // *** 1. GESTURE DETECTOR (Zoom/Rotate) ***
+      // Adapted from your code to work with Video
       AFRAME.registerComponent('gesture-detector', {
         schema: { enabled: { default: true }, sensitivity: { default: 0.5 }, zoomSpeed: { default: 0.01 } },
         init: function () {
@@ -37,6 +38,7 @@
           this.startX = 0;
           this.startY = 0;
           this.startRotation = { x: 0, y: 0 };
+          // For video, we start at scale 1.0 (instead of 10.0 like the 3D model)
           this.startScale = 1.0; 
           
           const targetEl = document.body;
@@ -82,7 +84,8 @@
           if (event.touches.length === 2) {
             const newDistance = this.getTouchDistance(event.touches);
             const scaleFactor = newDistance / this.startDistance;
-            const newScale = Math.min(Math.max(this.startScale * scaleFactor, 0.1), 10.0); 
+            // Limit video scale: Min 0.5, Max 10.0
+            const newScale = Math.min(Math.max(this.startScale * scaleFactor, 0.5), 10.0); 
             this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
           } else if (event.touches.length === 1) {
             this.onMove(event.touches[0]);
@@ -91,7 +94,7 @@
         onZoom: function (event) {
           const scale = this.el.getAttribute('scale').x;
           let newScale = scale + (event.deltaY * -this.data.zoomSpeed);
-          newScale = Math.min(Math.max(newScale, 0.1), 10.0); 
+          newScale = Math.min(Math.max(newScale, 0.5), 10.0); 
           this.el.setAttribute('scale', newScale + " " + newScale + " " + newScale);
         },
         getTouchDistance: function (touches) {
@@ -106,68 +109,79 @@
     </script>
 
     <script>
-      // *** 2. PINNING & AUDIO CONTROL ***
-      AFRAME.registerComponent('pin-and-control', {
+      // *** 2. PINNING + DELAYED AUDIO + VIDEO LOGIC ***
+      AFRAME.registerComponent('pin-and-control-video', {
         init: function() {
           const targetEl = document.querySelector('#target-0');
-          const myEntity = this.el;
+          const videoEntity = this.el;
           
-          // GRAB MEDIA ELEMENTS
+          // MEDIA ELEMENTS
           const videoElement = document.querySelector('#ar-video');
           const audioElement = document.querySelector('#ar-audio'); 
 
           let isPinned = false;
           let targetFound = false;
+          let mediaPlayed = false;
 
-          // Helper to play both media files
-          const attemptPlay = () => {
-            // 1. Play Video
-            if(videoElement && videoElement.paused) {
-                // If video is muted, it usually plays automatically. 
-                // If unmuted, browser might block it.
-                videoElement.play().then(() => {
-                    // Optional: Unmute if you want video sound too
-                    // videoElement.muted = false; 
-                }).catch(e => console.log("Video autoplay blocked"));
-            }
-            // 2. Play Audio File
-            if(audioElement && audioElement.paused) {
-                audioElement.play().catch(e => console.log("Audio autoplay blocked"));
-            }
+          // CONFIGURABLE DELAY (0.2s)
+          const audioDelaySeconds = 0.2;
+
+          // Function to play media safely
+          const playMediaFallback = () => {
+              if (mediaPlayed) return;
+
+              const delayMs = audioDelaySeconds * 1000;
+              
+              // Wait 0.2s before playing
+              setTimeout(() => {
+                  // Play Video
+                  if(videoElement && videoElement.paused) {
+                      videoElement.play().then(() => {
+                          // Optional: videoElement.muted = false; 
+                      }).catch(e => console.log("Video autoplay blocked"));
+                  }
+                  
+                  // Play Audio
+                  if (audioElement && audioElement.paused) {
+                      audioElement.loop = true;
+                      audioElement.volume = 0.5;
+                      audioElement.play().then(() => {
+                          mediaPlayed = true;
+                          console.log(`Audio started after ${audioDelaySeconds}s delay.`);
+                      }).catch(e => console.warn("Audio blocked"));
+                  }
+              }, delayMs);
           };
           
           const executePinning = () => {
               if (isPinned || !targetFound) return;
               isPinned = true;
 
-              // Copy position/rotation from Target to Pinned Entity
+              // 1. Copy Position/Rotation from Target
               const worldPos = new THREE.Vector3();
               const worldRot = new THREE.Quaternion();
               targetEl.object3D.getWorldPosition(worldPos);
               targetEl.object3D.getWorldQuaternion(worldRot);
 
-              myEntity.object3D.position.copy(worldPos);
-              myEntity.object3D.quaternion.copy(worldRot);
+              videoEntity.object3D.position.copy(worldPos);
+              videoEntity.object3D.quaternion.copy(worldRot);
 
-              // Make visible and hide target
-              myEntity.setAttribute('visible', true);
+              // 2. Show Video Entity, Hide Target
+              videoEntity.setAttribute('visible', true);
               targetEl.object3D.visible = false;
               
-              // Start Playing
-              attemptPlay();
+              // 3. Trigger Delayed Play
+              playMediaFallback();
 
-              // Fallback: If browser blocked audio, play on first click
-              document.body.addEventListener('click', () => {
+              // 4. Add User Interaction Fallback (Click to play)
+              const fallbackListener = () => {
                   if(videoElement.paused) videoElement.play();
                   if(audioElement.paused) audioElement.play();
-              }, { once: true });
+              };
+              document.body.addEventListener('click', fallbackListener, { once: true });
+              document.body.addEventListener('touchstart', fallbackListener, { once: true });
               
-              document.body.addEventListener('touchstart', () => {
-                  if(videoElement.paused) videoElement.play();
-                  if(audioElement.paused) audioElement.play();
-              }, { once: true });
-
-              console.log("Video pinned and audio started.");
+              console.log("Video pinned. Waiting for delay...");
           };
 
           targetEl.addEventListener('targetFound', () => {
@@ -200,10 +214,10 @@
       <a-entity mindar-image-target="targetIndex: 0" id="target-0"></a-entity>
       
       <a-entity 
-        id="pinned-content"
+        id="pinned-video-entity"
         visible="false"
         gesture-detector
-        pin-and-control
+        pin-and-control-video
       >
         <a-video src="#ar-video" width="1" height="0.5625" position="0 0 0"></a-video>
       </a-entity>
